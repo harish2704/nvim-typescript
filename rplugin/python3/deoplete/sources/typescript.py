@@ -90,33 +90,23 @@ class Source(Base):
 
         if len(data) == 0:
             return []
-
-        if len(data) > self._max_completion_detail:
-            filtered = []
-            for entry in data:
-                if entry["kind"] != "warning":
-                    filtered.append(entry)
-            return [self._convert_completion_data(e) for e in filtered]
-
-        names = []
-        maxNameLength = 0
-
+        filtered = []
         for entry in data:
-            if (entry["kind"] != "warning"):
-                names.append(entry["name"])
-                maxNameLength = max(maxNameLength, len(entry["name"]))
+            if entry["kind"] != "warning":
+                filtered.append(entry)
+        return [self._convert_completion_data(e) for e in filtered]
 
+    def on_post_filter(self, context):
+        names = [c['word'] for c in context['candidates'] ]
         detailed_data = self._client.completion_entry_details(
             file=self.relative_file(),
             line=context["position"][1],
             offset=context["complete_position"] + 1,
             entry_names=names
         )
-
         if len(detailed_data) == 0:
-            return []
-
-        return [self._convert_detailed_completion_data(e, padding=maxNameLength)
+            return context['candidates']
+        return [self._convert_detailed_completion_data(e)
                 for e in detailed_data]
 
     def _convert_completion_data(self, entry):
